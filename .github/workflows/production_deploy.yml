@@ -64,7 +64,6 @@ jobs:
 
   deploy_production:
     runs-on: ubuntu-latest
-    environment: production
     needs:
       - await_approval
     steps:

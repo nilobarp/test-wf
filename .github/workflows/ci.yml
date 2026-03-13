@@ -1,0 +1,16 @@
+name: CI Workflow
+on:
+  pull_request: ~
+  push:
+    branches:
+      - main
+
+jobs:
+  install:
+    name: Install Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # fetch all history for accurate affected detection
+          filter: tree:0 # reduce the size of the checkout with tree filtering, see https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/

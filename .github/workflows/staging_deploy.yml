@@ -44,6 +44,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.compute_sha.outputs.sha }}
+      - name: Run staging
+        run: ./staging.sh
 
   deploy_staging:
     runs-on: ubuntu-latest
@@ -53,17 +55,3 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v4
-
-  # Triggers production deploy after staging succeeds.
-  # trigger_production:
-  #   needs: [compute_sha, deploy_staging]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - name: Trigger production workflow
-  #       run: |
-  #         gh workflow run production_deploy.yml \
-  #           --ref main \
-  #           -f sha="${{ needs.compute_sha.outputs.sha }}"
-  #       env:
-  #         GH_TOKEN: ${{ github.token }}

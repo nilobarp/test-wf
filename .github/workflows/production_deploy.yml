@@ -73,12 +73,12 @@ jobs:
       # Skipped when using the legacy 'staging' fallback (no real SHA available).
       - name: Create GitHub Release
         if: ${{ needs.await_approval.outputs.release_tag != '' }}
-        run: |
-          gh release create "$RELEASE_TAG" \
-            --title "Release $RELEASE_TAG" \
-            --notes "Deployed commit $DEPLOY_SHA" \
-            --target "$DEPLOY_SHA"
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.await_approval.outputs.release_tag }}
           DEPLOY_SHA: ${{ inputs.sha }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --title "$RELEASE_TAG ($DEPLOY_SHA)" \
+            --generate-notes \
+            --target "$DEPLOY_SHA"

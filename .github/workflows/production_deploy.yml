@@ -1,0 +1,85 @@
+name: Production Deploy
+on:
+  workflow_call:
+    inputs:
+      sha:
+        description: Git SHA of the image to deploy
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "Git SHA to deploy"
+        required: true
+  workflow_run:
+    workflows: ["Staging Deploy"]
+    types: [completed]
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  generate_release_tag:
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release_tag.outputs.release_tag }}
+      deploy_date: ${{ steps.date.outputs.date }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get current date
+        id: date
+        run: echo "date=$(date +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_OUTPUT
+
+      # Generate a DDMMYYYY.N release tag by counting existing releases for today.
+      # Only runs when a real git SHA is provided (not the legacy 'staging' fallback).
+      - name: Generate release tag
+        id: release_tag
+        if: ${{ inputs.sha != 'staging' && inputs.sha != 'production' }}
+        run: |
+          TODAY=$(date +'%d%m%Y')
+          PREFIX="${TODAY}."
+          COUNT=$(gh release list --repo "$GITHUB_REPOSITORY" --limit 100 --json tagName \
+            --jq "[.[] | select(.tagName | startswith(\"$PREFIX\"))] | length")
+          N=$((COUNT + 1))
+          echo "release_tag=${TODAY}.${N}" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+  await_approval:
+    runs-on: ubuntu-latest
+    environment: production
+    needs:
+      - generate_release_tag
+    outputs:
+      release_tag: ${{ needs.generate_release_tag.outputs.release_tag }}
+      deploy_date: ${{ needs.generate_release_tag.outputs.deploy_date }}
+    concurrency:
+      group: production-await-approval
+      cancel-in-progress: true
+    steps:
+      - name: Await approval
+        run: echo "Awaiting production approval for SHA ${{ inputs.sha }}"
+
+  deploy_production:
+    runs-on: ubuntu-latest
+    environment: production
+    needs:
+      - await_approval
+    steps:
+      - uses: actions/checkout@v4
+
+      # Create a GitHub Release once the deploy succeeds.
+      # Skipped when using the legacy 'staging' fallback (no real SHA available).
+      - name: Create GitHub Release
+        if: ${{ needs.await_approval.outputs.release_tag != '' }}
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --title "Release $RELEASE_TAG" \
+            --notes "Deployed commit $DEPLOY_SHA" \
+            --target "$DEPLOY_SHA"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.await_approval.outputs.release_tag }}
+          DEPLOY_SHA: ${{ inputs.sha }}

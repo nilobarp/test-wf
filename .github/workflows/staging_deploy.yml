@@ -1,0 +1,73 @@
+name: Staging Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: Commit SHA to deploy (optional, defaults to HEAD of current branch)
+        required: false
+  workflow_run:
+    workflows: ["CI Workflow"]
+    types: [completed]
+    branches: [main]
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  # Only allow a single deploy at any time. New deploys will be pending until the current deploy finishes.
+  # Any existing pending deploy will be cancelled when a new one new deploy comes along.
+  group: ${{ github.workflow }}
+
+jobs:
+  compute_sha:
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.compute.outputs.sha }}
+    steps:
+      - name: Compute SHA
+        id: compute
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "sha=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ inputs.sha }}" ]; then
+            echo "sha=${{ inputs.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "sha=${{ github.sha }}" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    timeout-minutes: 30
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    needs: [compute_sha]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.compute_sha.outputs.sha }}
+
+  deploy_staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    needs:
+      - compute_sha
+      - build
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ap-southeast-2
+          role-to-assume: arn:aws:iam::771882897437:role/github-oidc-bidlevel
+
+  # Triggers production deploy after staging succeeds.
+  # trigger_production:
+  #   needs: [compute_sha, deploy_staging]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - name: Trigger production workflow
+  #       run: |
+  #         gh workflow run production_deploy.yml \
+  #           --ref main \
+  #           -f sha="${{ needs.compute_sha.outputs.sha }}"
+  #       env:
+  #         GH_TOKEN: ${{ github.token }}

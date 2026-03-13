@@ -53,10 +53,6 @@ jobs:
       - build
     steps:
       - uses: actions/checkout@v4
-      - uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ap-southeast-2
-          role-to-assume: arn:aws:iam::771882897437:role/github-oidc-bidlevel
 
   # Triggers production deploy after staging succeeds.
   # trigger_production:

@@ -14,3 +14,5 @@ jobs:
         with:
           fetch-depth: 0 # fetch all history for accurate affected detection
           filter: tree:0 # reduce the size of the checkout with tree filtering, see https://github.blog/open-source/git/get-up-to-speed-with-partial-clone-and-shallow-clone/
+      - name: Run test
+        run: ./test.sh

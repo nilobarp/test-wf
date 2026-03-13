@@ -2,4 +2,4 @@ workflow test - 1
 
 cancels production deploy #3 and queues #4
 
-- CI fails
+- CI passes but staging fails

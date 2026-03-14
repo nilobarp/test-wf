@@ -83,7 +83,7 @@ jobs:
             SHA_PREFIX=$(echo "${{ inputs.sha }}" | cut -c1-8)
             echo "suffix= - Hot fix: ${SHA_PREFIX}" >> $GITHUB_OUTPUT
           else
-            echo "suffix=''" >> $GITHUB_OUTPUT
+            echo "suffix=" >> $GITHUB_OUTPUT
           fi
         env:
           GH_TOKEN: ${{ github.token }}

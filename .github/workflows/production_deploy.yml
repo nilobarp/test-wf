@@ -40,7 +40,6 @@ jobs:
     environment: production
     needs:
       - on-success
-      - on-failure
     # outputs:
     #   release_tag: ${{ needs.generate_release_tag.outputs.release_tag }}
     #   deploy_date: ${{ needs.generate_release_tag.outputs.deploy_date }}

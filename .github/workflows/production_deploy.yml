@@ -55,6 +55,7 @@ jobs:
     needs: [await_approval]
     outputs:
       release_tag: ${{ steps.release_tag.outputs.release_tag }}
+      suffix: ${{ steps.release_tag.outputs.suffix }}
       deploy_date: ${{ steps.date.outputs.date }}
     steps:
       - uses: actions/checkout@v4
@@ -75,12 +76,14 @@ jobs:
             --jq "[.[] | select(.tagName | startswith(\"$PREFIX\"))] | length")
           N=$((COUNT + 1))
 
+          echo "release_tag='${TODAY}.${N}'" >> $GITHUB_OUTPUT
+
           # Append first 8 chars of SHA if available
           if [ -n "${{ inputs.sha }}" ]; then
             SHA_PREFIX=$(echo "${{ inputs.sha }}" | cut -c1-8)
-            echo "release_tag='${TODAY}.${N} - Hot fix: ${SHA_PREFIX}'" >> $GITHUB_OUTPUT
+            echo "suffix=' - Hot fix: ${SHA_PREFIX}'" >> $GITHUB_OUTPUT
           else
-            echo "release_tag='${TODAY}.${N}'" >> $GITHUB_OUTPUT
+            echo "suffix=''" >> $GITHUB_OUTPUT
           fi
         env:
           GH_TOKEN: ${{ github.token }}
@@ -99,9 +102,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ needs.generate_release_tag.outputs.release_tag }}
+          SUFFIX: ${{ needs.generate_release_tag.outputs.suffix }}
           DEPLOY_SHA: ${{ inputs.sha }}
         run: |
           gh release create "$RELEASE_TAG" \
-            --title "$RELEASE_TAG" \
+            --title "$RELEASE_TAG$SUFFIX" \
             --generate-notes \
             --target "$DEPLOY_SHA"

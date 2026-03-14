@@ -76,12 +76,12 @@ jobs:
             --jq "[.[] | select(.tagName | startswith(\"$PREFIX\"))] | length")
           N=$((COUNT + 1))
 
-          echo "release_tag='${TODAY}.${N}'" >> $GITHUB_OUTPUT
+          echo "release_tag=${TODAY}.${N}" >> $GITHUB_OUTPUT
 
           # Append first 8 chars of SHA if available
           if [ -n "${{ inputs.sha }}" ]; then
             SHA_PREFIX=$(echo "${{ inputs.sha }}" | cut -c1-8)
-            echo "suffix=' - Hot fix: ${SHA_PREFIX}'" >> $GITHUB_OUTPUT
+            echo "suffix= - Hot fix: ${SHA_PREFIX}" >> $GITHUB_OUTPUT
           else
             echo "suffix=''" >> $GITHUB_OUTPUT
           fi
